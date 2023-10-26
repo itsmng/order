@@ -4,3 +4,4 @@ vendor/
 *.min.*
 templates/
 !templates/example.odt
+composer.lock
