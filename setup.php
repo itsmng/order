@@ -28,12 +28,7 @@
  * -------------------------------------------------------------------------
  */
 
-define('PLUGIN_ORDER_VERSION', '2.7.7');
-
-// Minimal GLPI version, inclusive
-define("PLUGIN_ORDER_MIN_GLPI", "9.5");
-// Maximum GLPI version, exclusive
-define("PLUGIN_ORDER_MAX_GLPI", "9.6");
+define('PLUGIN_ORDER_VERSION', '2.10.4');
 
 if (!defined('PLUGIN_ORDER_DIR')) {
    define("PLUGIN_ORDER_DIR", Plugin::getPhpDir('order'));
@@ -71,12 +66,54 @@ include_once PLUGIN_ORDER_DIR . "/vendor/autoload.php";
 
 
 /**
+ * Get the name and the version of the plugin
+ * REQUIRED
+ *
+ * @return array
+ */
+function plugin_version_order() : array {
+   return [
+      'name'           => __("Orders management", "order"),
+      'version'        => PLUGIN_ORDER_VERSION,
+      'author'         => 'The plugin order team',
+      'homepage'       => 'https://github.com/pluginsGLPI/order',
+      'license'        => 'GPLv2+',
+      'requirements'   => [
+         'php'    => [
+            'min' => '8.0'
+         ]
+      ]
+   ];
+}
+
+/**
+ * Check pre-requisites before install
+ * OPTIONNAL, but recommanded
+ *
+ * @return boolean
+ */
+function plugin_order_check_prerequisites() : bool {
+   if (version_compare(ITSM_VERSION, '1.0', 'lt')) {
+      echo "This plugin requires ITSM >= 1.0";
+      return false;
+   }
+   if (!is_readable(__DIR__ . '/vendor/autoload.php') || !is_file(__DIR__ . '/vendor/autoload.php')) {
+      echo "Run composer install --no-dev in the plugin directory<br>";
+      return false;
+   }
+
+   return true;
+}
+
+
+
+/**
  * Init hooks of the plugin.
  * REQUIRED
  *
  * @return void
  */
-function plugin_init_order() {
+function plugin_init_order() : void {
    global $PLUGIN_HOOKS, $CFG_GLPI, $ORDER_TYPES;
 
    Plugin::registerClass('PluginOrderProfile');
@@ -179,43 +216,4 @@ function plugin_init_order() {
          $PLUGIN_HOOKS['plugin_datainjection_populate']['order'] = "plugin_datainjection_populate_order";
       }
    }
-}
-
-
-/**
- * Get the name and the version of the plugin
- * REQUIRED
- *
- * @return array
- */
-function plugin_version_order() {
-   return [
-      'name'           => __("Orders management", "order"),
-      'version'        => PLUGIN_ORDER_VERSION,
-      'author'         => 'The plugin order team',
-      'homepage'       => 'https://github.com/pluginsGLPI/order',
-      'license'        => 'GPLv2+',
-      'requirements'   => [
-         'glpi' => [
-            'min' => PLUGIN_ORDER_MIN_GLPI,
-            'max' => PLUGIN_ORDER_MAX_GLPI,
-         ]
-      ]
-   ];
-}
-
-
-/**
- * Check pre-requisites before install
- * OPTIONNAL, but recommanded
- *
- * @return boolean
- */
-function plugin_order_check_prerequisites() {
-   if (!is_readable(__DIR__ . '/vendor/autoload.php') || !is_file(__DIR__ . '/vendor/autoload.php')) {
-      echo "Run composer install --no-dev in the plugin directory<br>";
-      return false;
-   }
-
-   return true;
 }
