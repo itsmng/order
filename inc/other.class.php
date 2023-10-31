@@ -58,7 +58,7 @@ class PluginOrderOther extends CommonDBTM {
                   PRIMARY KEY  (`ID`),
                   KEY `name` (`name`),
                   KEY `entities_id` (`entities_id`),
-                  KEY `plugin_order_othertypes_id` (`plugin_order_othertypes_id`)
+                  KEY `plugin_order_othertypes_id` (`othertypes_id`)
                ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;";
          $DB->query($query) or die ($DB->error());
       } else {
