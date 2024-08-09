@@ -537,6 +537,33 @@ class PluginOrderReference extends CommonDBTM {
    public function showForm($id, $options = []) {
       global $DB;
 
+      $form = [
+        'action'     => $this->getFormURL(),
+        'buttons'    => [
+            [
+                'name'  => $this->isNewID($id) ? _sx('button', 'Add') : _sx('button', 'Save'),
+                'class' => 'btn btn-secondary',
+                'value' => $this->isNewID($id) ? _sx('button', 'Add') : _sx('button', 'Save'),
+            ],
+            $this->canDelete() && !$this->isNewID($id) ? [
+                'name'  => __('Delete'),
+                'class' => 'btn btn-danger',
+                'value' => _sx('button', 'Delete'),
+            ] : [],
+            $this->canPurge() && !$this->isNewID($id) && !$this->isDeleted() ? [
+                'name'  => __('Purge'),
+                'class' => 'btn btn-danger',
+                'value' => _sx('button', 'Purge'),
+            ] : [],
+        ],
+        'content'    => [
+            $this->getTypeName() => [
+                'visible'    => true,
+                'inputs'     => [],
+            ]
+        ],
+      ];
+      renderTwigForm($form, '', $this->fields);
       $this->initForm($id, $options);
       $reference_in_use = !$id ? false : $this->referenceInUse();
 

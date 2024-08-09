@@ -803,8 +803,6 @@ class PluginOrderOrder extends CommonDBTM {
 
 
    public function showForm ($ID, $options = []) {
-      global $DB;
-
       $config = PluginOrderConfig::getConfig();
       if (!$config->isConfigured()) {
 
@@ -817,12 +815,6 @@ class PluginOrderOrder extends CommonDBTM {
          echo "</div>";
          return;
       }
-
-      $this->initForm($ID, $options);
-      $this->showFormHeader($options);
-
-      $rand   = mt_rand();
-      $user   = new User();
 
       if (isset($options['withtemplate']) && $options['withtemplate'] == 2) {
          $template   = "newcomp";
@@ -849,504 +841,351 @@ class PluginOrderOrder extends CommonDBTM {
          self::displayAlertOverBudget(self::isOverBudget($ID));
       }
 
-      //Display without inside table
-      /* title */
-      echo "<tr class='tab_bg_1'><td>".__("Order name", "order")."*: </td>";
-      echo "<td>";
-      if ($canedit) {
-         $objectName = autoName($this->fields["name"], "name", ($template === "newcomp"),
-                                $this->getType(), $this->fields["entities_id"]);
-         Html::autocompletionTextField($this, "name", ['value' => $objectName]);
-      } else {
-         echo $this->fields["name"];
-      }
-      echo "</td>";
-      /* date of order */
-      echo "<td>".__("Date of order", "order").":</td><td>";
-      if ($canedit) {
-         $value = $this->fields["order_date"] == null ? date('Y-m-d') : $this->fields["order_date"];
-         Html::showDateField(
-            'order_date', [
-               'value'        => $value,
-               'maybeempty'   => true,
-               'canedit'      => true
-            ]
-         );
-      } else {
-         echo Html::convDate($this->fields["order_date"]);
-      }
-      echo "</td></tr>";
-
-      /* num order */
-      echo "<tr class='tab_bg_1'><td>".__("Order number", "order");
-      if ($ID > 0) {
-         echo "*";
-      } else {
-         echo " <span class='red'>*</span>";
-      }
-      echo ": </td>";
-      echo "<td>";
-      if ($canedit) {
-         $objectOrder = autoName($this->fields["num_order"], "num_order", ($template === "newcomp"),
-                                 $this->getType(), $this->fields["entities_id"]);
-         Html::autocompletionTextField($this, "num_order", ['value' => $objectOrder]);
-      } else {
-         echo $this->fields["num_order"];
-      }
-      echo "</td>";
-      /* type order */
-      echo "<td>".__("Type").": </td><td>";
-      if ($canedit) {
-         PluginOrderOrderType::Dropdown([
-            'name'  => "plugin_order_ordertypes_id",
-            'value' => $this->fields["plugin_order_ordertypes_id"]
-         ]);
-      } else {
-         echo Dropdown::getDropdownName("glpi_plugin_order_ordertypes",
-                                        $this->fields["plugin_order_ordertypes_id"]);
-      }
-      echo "</td></tr>";
-
-      /* state */
-      echo "<tr class='tab_bg_1'><td>".__("Order status", "order").": </td>";
-      echo "<td>";
       if (!$this->getID()) {
          $state = $config->getDraftState();
       } else {
          $state = $this->fields["plugin_order_orderstates_id"];
       }
-      if ($canedit) {
-         PluginOrderOrderState::Dropdown([
-            'name'   => "plugin_order_orderstates_id",
-            'value'  => $state
-         ]);
-      } else {
-         echo Dropdown::getDropdownName("glpi_plugin_order_orderstates", $this->getState());
-      }
-      echo "</td>";
 
-      /* budget */
-      echo "<td>".__("Budget").": </td>";
-      echo "<td>";
-      if ($canedit) {
-         if ($config->canHideInactiveBudgets()) {
-            $restrict = [
-               'OR' => [
-                  ['end_date' => null],
-                  ['end_date' => ['>', date("Y-m-d")]],
-               ]
-            ];
-         } else {
-            $restrict = [];
-         }
+      $form = [
+         'action'      => $this->getFormURL(),
+         'buttons'     => [
+            $canedit ? [
+                'name'  => $this->isNewID($ID) ? 'add' : 'update',
+                'value' => $this->isNewID($ID) ? __('Add') : __('Update'),
+                'class' => 'btn btn-secondary',
+            ] : [],
+            !$this->isNewID($ID) && !$this->isDeleted() && $this->canDelete() ? [
+               'name'  => 'delete',
+               'value' => __('Delete'),
+               'class' => 'btn btn-secondary',
+               'href'  => $this->getDeleteURL(),
+            ] : [],
+         ] + (!$this->isNewId($ID) && $this->isDeleted() ? [
+            [
+               'name'  => 'restore',
+               'value' => __('Restore'),
+               'class' => 'btn btn-secondary',
+               'href'  => $this->getRestoreURL(),
+            ],
+            $this->canPurge() ? [
+               'name'  => 'purge',
+               'value' => __('Purge'),
+               'class' => 'btn btn-secondary',
+               'href'  => $this->getPurgeURL(),
+            ] : [],
+         ] : []),
+         'content'     => [
+            $this->getTypeName(1) => [
+                'visible'   => true,
+                'inputs'    => [
+                   __('Order name', 'order') => $canedit ? [
+                      'type'  => 'text',
+                      'name'  => 'name',
+                      'value' => $this->fields['name'],
+                      'required' => true,
+                   ] : [
+                      'content' => $this->fields['name'],
+                   ],
+                   __('Order number', 'order') => $canedit ? [
+                      'type'  => 'text',
+                      'name'  => 'num_order',
+                      'value' => $this->fields['num_order'],
+                      'required' => true,
+                   ] : [
+                      'content' => $this->fields['num_order'],
+                   ],
+                   __('Date of order', 'order') => $canedit ? [
+                      'type'  => 'date',
+                      'name'  => 'order_date',
+                      'value' => $this->fields['order_date'] ?? date('Y-m-d'),
+                   ] : [
+                      'content' => $this->fields['order_date'],
+                   ],
+                   __('Type') => $canedit ? [
+                      'type'  => 'select',
+                      'itemtype' => PluginOrderOrderType::class,
+                      'name'  => 'plugin_order_ordertypes_id',
+                      'value' => $this->fields['plugin_order_ordertypes_id'],
+                   ] : [
+                      'content' => Dropdown::getDropdownName("glpi_plugin_order_ordertypes", $this->fields['plugin_order_ordertypes_id']),
+                   ],
+                   __('Order status', 'order') => $canedit ? [
+                      'type'  => 'select',
+                      'itemtype' => PluginOrderOrderState::class,
+                      'name'  => 'plugin_order_orderstates_id',
+                      'value' => $state,
+                   ] : [
+                      'content' => Dropdown::getDropdownName("glpi_plugin_order_orderstates", $this->getState()),
+                   ],
+                   __('Budget') => $canedit ? [
+                      'type'  => 'select',
+                      'name'  => 'budgets_id',
+                      'itemtype' => Budget::class,
+                      'conditions' => [
+                        'entities_id' => $this->fields['entities_id'],
+                        ] + ($config->canHideInactiveBudgets() ? [
+                        'OR' => [
+                            ['end_date' => null],
+                            ['end_date' => ['>', date("Y-m-d")]]]] : [
+                        ]),
+                      'value' => $this->fields['budgets_id'],
+                   ] : [
+                      'content' => (function() {
+                         $budget = new Budget();
+                         if ($budget->getFromDB($this->fields['budgets_id'])) {
+                            return $budget->getLink();
+                         } else {
+                            return Dropdown::getDropdownName("glpi_budgets", $this->fields['budgets_id']);
+                         }
+                      })(),
+                   ],
+                   __('Delivery location', 'order') => $canedit ? [
+                      'type'  => 'select',
+                      'name'  => 'locations_id',
+                      'itemtype' => Location::class,
+                      'value' => $this->fields['locations_id'],
+                      'entity' => $this->fields['entities_id'],
+                   ] : [
+                      'content' => Dropdown::getDropdownName("glpi_locations", $this->fields['locations_id']),
+                   ],
+                   __('Payment conditions', 'order') => $canedit ? [
+                      'type'  => 'select',
+                      'name'  => 'plugin_order_orderpayments_id',
+                      'itemtype' => PluginOrderOrderPayment::class,
+                      'value' => $this->fields['plugin_order_orderpayments_id'],
+                   ] : [
+                      'content' => Dropdown::getDropdownName("glpi_plugin_order_orderpayments", $this->fields['plugin_order_orderpayments_id']),
+                   ],
+                   __('Supplier') => $canedit && !$this->checkIfDetailExists($ID) ? [
+                      'type'  => 'select',
+                      'name'  => 'suppliers_id',
+                      'itemtype' => Supplier::class,
+                      'conditions' => [
+                         'entities_id' => $this->fields['entities_id'],
+                      ],
+                      'value' => $this->fields['suppliers_id'],
+                      'entity' => $this->fields['entities_id'],
+                      'hooks' => [
+                         'change' => <<<JS
+                            $.ajax({
+                               url: '../ajax/dropdownSupplier.php',
+                               data: {
+                                  suppliers_id: jQuery(this).val(),
+                                  fieldname: 'contacts_id'
+                               },
+                               success: function(data) {
+                                  jQuery('#show_contacts_id').html(data);
+                               }
+                            });
+                         JS,
+                      ],
+                   ] : [
+                      'content' => (function() {
+                         $supplier = new Supplier();
+                         if ($supplier->getFromDB($this->fields['suppliers_id'])) {
+                            return $supplier->getLink();
+                         } else {
+                            return Dropdown::getDropdownName("glpi_suppliers", $this->fields['suppliers_id']);
+                         }
+                      })(),
+                   ],
+                   __('Postage', 'order') => $canedit ? [
+                      'type'  => 'number',
+                      'name'  => 'port_price',
+                      'value' => $this->fields['port_price'],
+                   ] : [
+                      'content' => Html::formatNumber($this->fields['port_price']),
+                   ],
+                   __('Contact') => $canedit ? [
+                      'type'  => 'select',
+                      'name'  => 'contacts_id',
+                      'itemtype' => Contact::class,
+                      'value' => $this->fields['contacts_id'],
+                   ] : [
+                      'content' => Dropdown::getDropdownName("glpi_contacts", $this->fields['contacts_id']),
+                   ],
+                   __('VAT', 'order').' '.__('Postage', 'order') => $canedit ? [
+                      'type'  => 'select',
+                      'name'  => 'plugin_order_ordertaxes_id',
+                      'itemtype' => PluginOrderOrderTax::class,
+                      'value' => (empty($ID) || $ID < 0) ? (new PluginOrderConfig())->getDefaultTaxes() : $this->fields['plugin_order_ordertaxes_id'],
+                   ] : [
+                      'content' => Dropdown::getDropdownName("glpi_plugin_order_ordertaxes", $this->fields['plugin_order_ordertaxes_id']),
+                   ],
+                   __('Associable to a ticket') => $canedit ? [
+                      'type'  => 'checkbox',
+                      'name'  => 'is_helpdesk_visible',
+                      'value' => $this->fields['is_helpdesk_visible'],
+                      'label' => __('Associable to a ticket'),
+                   ] : [
+                      'content' => Dropdown::getYesNo($this->fields['is_helpdesk_visible']),
+                   ],
+                   __('Estimated due date') => $canedit ? [
+                      'type'  => 'date',
+                      'name'  => 'duedate',
+                      'value' => $this->fields['duedate'] ?? '',
+                   ] : [
+                      'content' => Html::convDate($this->fields['duedate']),
+                   ],
+                   '' => [
+                      'content' => (function() {
+                         $return = '';
+                         if ($this->isDelivered() && $this->fields['deliverydate']) {
+                            $return .= Html::convDate($this->fields['deliverydate']);
+                         }
+                         if ($this->shouldBeAlreadyDelivered()) {
+                            $return .= "<br/><span class='red'>".__("Due date overtaken", "order")."</span>";
+                         }
+                         if ($this->isDelivered() && $this->fields['deliverydate']) {
+                            $return .= "<br/>".Html::convDate($this->fields['deliverydate'])."</span>";
+                         }
+                         return $return;
+                      })()
+                   ],
+                   __('Global discount to apply to items',  'order') => $canedit ? [
+                      'type'  => 'number',
+                      'name'  => 'global_discount',
+                      'value' => $this->fields['global_discount'],
+                      'after' => '%',
+                   ] : [
+                      'content' => Html::formatNumber($this->fields['global_discount']),
+                   ],
+                   __('Comments') => $canedit ? [
+                      'type'  => 'textarea',
+                      'name'  => 'comment',
+                      'value' => $this->fields['comment'],
+                   ] : [
+                      'content' => $this->fields['comment'],
+                   ],
+                ],
+            ],
+            __('Account section', 'order') => $config->isAccountSectionDisplayed() ? [
+                'visible'   => true,
+                'inputs'    => [
+                   PluginOrderAccountSection::getTypeName(1) => $canedit ? [
+                      'type'  => 'select',
+                      'name'  => 'plugin_order_accountsections_id',
+                      'itemtype' => PluginOrderAccountSection::class,
+                      'conditions' => [
+                         'entities_id' => $this->fields['entities_id'],
+                      ],
+                      'value' => $this->fields['plugin_order_accountsections_id'],
+                      'required' => $config->isAccountSectionMandatory(),
+                   ] : [
+                      'content' => Dropdown::getDropdownName("glpi_plugin_order_accountsections", $this->fields['plugin_order_accountsections_id']),
+                   ],
+                   __('Template name') => !$template && !empty($this->fields['template_name']) ? [
+                      'content' => "<span class='small_space'>(".__("Template name")."&nbsp;: ".$this->fields['template_name'].")</span>",
+                   ] : [],
+                ]
+            ]: [],
+            __('Actor') => [
+                'visible'   => true,
+                'inputs'    => [
+                   __('Author') => $canedit ? [
+                      'type'  => 'select',
+                      'name'  => 'users_id',
+                      'values' => getOptionsForUsers('interface'),
+                      'value' => $this->fields['users_id'],
+                      'required' => true,
+                   ] : [
+                      'content' => (function() {
+                         if ($this->fields['users_id']) {
+                            $user = new User();
+                            $output = formatUserName($this->fields['users_id'], $user->fields['name'],
+                                                     $user->fields['realname'], $user->fields['firstname']);
+                            return $output;
+                         }
+                      })(),
+                   ],
+                   __('Author group', 'order') => $canedit ? [
+                      'type'  => 'select',
+                      'name'  => 'groups_id',
+                      'itemtype' => Group::class,
+                      'value' => $this->fields['groups_id'],
+                   ] : [
+                      'content' => Dropdown::getDropdownName('glpi_groups', $this->fields['groups_id']),
+                   ],
+                   __('Recipient') => $canedit ? [
+                      'type'  => 'select',
+                      'name'  => 'users_id_delivery',
+                      'values' => getOptionsForUsers('all'),
+                      'value' => $this->fields['users_id_delivery'],
+                      'required' => true,
+                      'hooks' => [
+                         'change' => <<<JS
+                            $.ajax({
+                               url: '../ajax/dropdownSupplier.php',
+                               data: {
+                                  suppliers_id: jQuery(this).val(),
+                                  fieldname: 'contacts_id'
+                               },
+                               success: function(data) {
+                                  jQuery('#show_contacts_id_delivery').html(data);
+                               }
+                            });
+                         JS,
+                      ],
+                   ] : [
+                      'content' => (function() {
+                         if ($this->fields['users_id_delivery']) {
+                            $user = new User();
+                            $output = formatUserName($this->fields['users_id'], $user->fields['name'],
+                                                     $user->fields['realname'], $user->fields['firstname']);
+                            return $output;
+                         }
+                      })(),
+                   ],
+                   __('Recipient group', 'order') => $canedit ? [
+                      'type'  => 'select',
+                      'name'  => 'groups_id_delivery',
+                      'itemtype' => Group::class,
+                      'value' => $this->fields['groups_id_delivery'],
+                   ] : [
+                      'content' => Dropdown::getDropdownName('glpi_groups', $this->fields['groups_id_delivery']),
+                   ],
+                ],
+            ],
+            __('Price tax free', 'order') => [
+               'visible'   => true,
+               'inputs'    => [
+                  __('Price tax free') => $canedit ? [
+                     'type'  => 'number',
+                     'name'  => 'port_price',
+                     'value' => $this->fields['port_price'],
+                  ] : [
+                     'content' => Html::formatNumber($this->fields['port_price']),
+                  ],
+                  __('Price tax free with postage', 'order') => [
+                     'content' => (function() use ($ID) {
+                        $PluginOrderOrder_Item = new PluginOrderOrder_Item();
+                        $prices                = $PluginOrderOrder_Item->getAllPrices($ID);
 
-         Budget::Dropdown([
-            'name'      => "budgets_id",
-            'value'     => $this->fields["budgets_id"],
-            'entity'    => $this->fields["entities_id"],
-            'comments'  => true,
-            'condition' => $restrict,
-            'width'     => '150px',
-         ]);
-      } else {
-         $budget = new Budget();
-         if ($this->fields["budgets_id"] > 0
-             && $budget->can($this->fields["budgets_id"], READ)) {
-            echo $budget->getLink();
-         } else {
-            echo Dropdown::getDropdownName("glpi_budgets", $this->fields["budgets_id"]);
-         }
-      }
-      echo "</td></tr>";
-
-      /* location */
-      echo "<tr class='tab_bg_1'><td>".__("Delivery location", "order").": </td>";
-      echo "<td>";
-      if ($canedit) {
-         Location::Dropdown([
-            'name'   => "locations_id",
-            'value'  => $this->fields["locations_id"],
-            'entity' => $this->fields["entities_id"],
-         ]);
-      } else {
-         echo Dropdown::getDropdownName("glpi_locations", $this->fields["locations_id"]);
-      }
-      echo "</td>";
-
-      /* payment */
-      echo "<td>".__("Payment conditions", "order").": </td><td>";
-      if ($canedit) {
-         PluginOrderOrderPayment::Dropdown([
-            'name'  => "plugin_order_orderpayments_id",
-            'value' => $this->fields["plugin_order_orderpayments_id"],
-         ]);
-      } else {
-         echo Dropdown::getDropdownName("glpi_plugin_order_orderpayments",
-                                        $this->fields["plugin_order_orderpayments_id"]);
-      }
-      echo "</td>";
-      echo "</tr>";
-
-      /* supplier of order */
-      echo "<tr class='tab_bg_1'><td>".__("Supplier").": </td>";
-      echo "<td>";
-      if ($canedit && !$this->checkIfDetailExists($ID)) {
-         $rand = mt_rand();
-
-         Supplier::dropdown([
-            'name'    => "suppliers_id",
-            'rand'    => $rand,
-            'value'   => $this->fields["suppliers_id"],
-            'entity'  => $this->fields["entities_id"],
-         ]);
-
-         $params = [
-            'suppliers_id' => '__VALUE__',
-            'fieldname'    => 'contacts_id',
-         ];
-         Ajax::updateItemOnSelectEvent("dropdown_suppliers_id$rand", "show_contacts_id$rand",
-                                       "../ajax/dropdownSupplier.php",
-                                       $params);
-      } else {
-         $supplier = new Supplier();
-         if ($supplier->can($this->fields['suppliers_id'], READ)) {
-            echo $supplier->getLink();
-         } else {
-            echo Dropdown::getDropdownName("glpi_suppliers", $this->fields["suppliers_id"]);
-         }
-      }
-      echo "</td>";
-
-      /* port price */
-      echo "<td>".__("Postage", "order").": </td>";
-      echo "<td>";
-      if ($canedit) {
-         echo "<input type='number' min='0' step='".PLUGIN_ORDER_NUMBER_STEP."' name='port_price' size='5'"
-            ." value=\"".Html::formatNumber($this->fields["port_price"], true)."\">";
-      } else {
-         echo Html::formatNumber($this->fields["port_price"]);
-      }
-      echo "</td>";
-      echo "</tr>";
-
-      /* linked contact of the supplier of order */
-      echo "<tr class='tab_bg_1'><td>".__("Contact").": </td>";
-      echo "<td><span id='show_contacts_id'>";
-      if ($canedit) {
-         echo "<span id='show_contacts_id$rand'>";
-         // Make a select box
-         $query = "SELECT c.`id`, c.`name`, c.`firstname`
-                   FROM `glpi_contacts` c
-                   LEFT JOIN `glpi_contacts_suppliers` s ON (s.`contacts_id` = c.`id`)
-                   WHERE s.`suppliers_id` = '{$this->fields['suppliers_id']}'
-                   ORDER BY c.`name`";
-         $result = $DB->query($query);
-         $number = $DB->numrows($result);
-
-         $values = [0 => Dropdown::EMPTY_VALUE];
-         if ($number) {
-            while ($data = $DB->fetchAssoc($result)) {
-               $values[$data['id']] = formatUserName('', '', $data['name'], $data['firstname']);
-            }
-         }
-         Dropdown::showFromArray("contacts_id", $values, [
-            'value' => $this->fields['contacts_id'],
-            'rand'  => $rand,
-         ]);
-         echo "</span>\n";
-      } else {
-         echo Dropdown::getDropdownName("glpi_contacts", $this->fields["contacts_id"]);
-      }
-      echo "</span></td>";
-
-      /* tva port price */
-      echo "<td>".__("VAT", "order")." ".__("Postage", "order").": </td><td>";
-      $PluginOrderConfig = new PluginOrderConfig();
-      $default_taxes     = $PluginOrderConfig->getDefaultTaxes();
-
-      $taxes = (empty($ID) || ($ID < 0)) ? $default_taxes : $this->fields["plugin_order_ordertaxes_id"];
-
-      if ($canedit) {
-         PluginOrderOrderTax::Dropdown([
-            'name'                => "plugin_order_ordertaxes_id",
-            'value'               => $taxes,
-            'display_emptychoice' => true,
-            'emptylabel'          => __("No VAT", "order"),
-         ]);
-      } else {
-         echo Dropdown::getDropdownName("glpi_plugin_order_ordertaxes", $taxes);
-      }
-      echo "</td>";
-      echo "</tr>";
-
-      echo "<tr class='tab_bg_1'>";
-      echo "<td>".__("Associable to a ticket")."&nbsp;:</td><td>";
-      if ($canedit) {
-         Dropdown::showYesNo('is_helpdesk_visible', $this->fields['is_helpdesk_visible']);
-      } else {
-         echo Dropdown::getYesNo($this->fields['is_helpdesk_visible']);
-      }
-      echo "</td>";
-      echo "<td>";
-      echo __("Estimated due date", "order").":";
-      if ($this->isDelivered() && $this->fields['deliverydate']) {
-         echo "<br/>".__("Delivery date").":";
-      }
-      echo " </td><td>";
-      if ($canedit) {
-         $value = $this->fields["duedate"] == null ? '' : $this->fields["duedate"];
-         Html::showDateField('duedate', [
-            'value'        => $value,
-            'maybeempty'   => true,
-            'canedit'      => true
-         ]);
-      } else {
-         echo Html::convDate($this->fields["duedate"]);
-      }
-      if ($this->shouldBeAlreadyDelivered()) {
-         echo "<br/><span class='red'>".__("Due date overtaken", "order")."</span>";
-
-      }
-      if ($this->isDelivered() && $this->fields['deliverydate']) {
-         echo "<br/>".Html::convDate($this->fields['deliverydate']);
-      }
-      echo "</td>";
-      echo "</tr>";
-
-      echo "<tr class='tab_bg_1'>";
-      echo "<td>".__("Global discount to apply to items", 'order')."&nbsp;:</td><td>";
-      if ($canedit) {
-         echo "<input type='number' min='0' step='".PLUGIN_ORDER_NUMBER_STEP."' name='global_discount' size='5'"
-            ." value=\"".Html::formatNumber($this->fields["global_discount"], true)."\" class='smalldecimal'>";
-      } else {
-         echo Html::formatNumber($this->fields["global_discount"]);
-      }
-      echo "%</td>";
-      echo "<td>";
-      echo "</td>";
-      echo "</tr>";
-
-      /* account section */
-      echo "<tr class='tab_bg_1'>";
-      echo "<td>";
-      if (!$config->isAccountSectionDisplayed()) {
-         echo "<span style='display:none'>";
-      }
-      echo __("Account section", "order") . " :";
-      if (!$config->isAccountSectionDisplayed()) {
-         echo "</span>";
-      }
-      echo "</td>";
-
-      echo "<td>";
-      if (!$config->isAccountSectionDisplayed()) {
-         echo "<span style='display:none'>";
-      }
-      if ($canedit) {
-         PluginOrderAccountSection::Dropdown([
-            'name'  => "plugin_order_accountsections_id",
-            'value' => $this->fields["plugin_order_accountsections_id"],
-         ]);
-      } else {
-         echo Dropdown::getDropdownName("glpi_plugin_order_accountsections",
-                                        $this->fields["plugin_order_accountsections_id"]);
-      }
-
-      if ($config->isAccountSectionMandatory()) {
-         echo " <span class='red'>*</span>";
-      }
-      if (!$config->isAccountSectionDisplayed()) {
-         echo "</span>";
-      }
-      echo "</td>";
-      echo "<td colspan='2'></td>";
-      echo "</tr>";
-
-      echo "<tr class='tab_bg_1'>";
-      echo "<td colspan='2' class='center'>".$datestring;
-      if (!$template && !empty($this->fields['template_name'])) {
-         echo "<span class='small_space'>(".__("Template name")."&nbsp;: "
-           .$this->fields['template_name'].")</span>";
-      }
-      echo "</td><td colspan='2'></td>";
-      echo "</tr>";
-
-      echo "<tr class='tab_bg_1'>";
-
-      //comments of order
-      echo "<td>".__("Comments").":  </td>";
-      echo "<td colspan='3' align='center'>";
-      if ($canedit) {
-         echo "<textarea cols='40' rows='3' name='comment'>".$this->fields["comment"]."</textarea>";
-      } else {
-         echo $this->fields["comment"];
-      }
-      echo "</td></tr>";
-
-      echo "<tr class='tab_bg_1'>";
-      echo "<th colspan='2'>".__("Actor")."</th>";
-      if ($ID > 0 && !$template) {
-         echo "<th colspan='2'>".__("Cost")."</th></tr>";
-      } else {
-         echo "<th colspan='2'></th>";
-      }
-      echo "</tr>";
-
-      echo "<tr class='tab_bg_1'>";
-      echo "<td colspan='2'>";
-      echo "<table class='format'>";
-      echo "<tr class='tab_bg_1'><td>".__("Author").":</td><td style='width: 170px;'>";
-      if ($canedit) {
-         if ($template == 'newcomp') {
-            $value = Session::getLoginUserID();
-         } else {
-            $value = $this->fields['users_id'];
-         }
-         User::Dropdown([
-            'name'   => 'users_id',
-            'value'  => $value,
-            'right'  => 'interface',
-            'entity' => $this->fields["entities_id"],
-            'width'  => '150px',
-         ]);
-      } else {
-         if ($this->fields['users_id']) {
-            $output = "";
-
-            if ($user->getFromDB($this->fields['users_id'])) {
-               $output = formatUserName($this->fields['users_id'], $user->fields['name'],
-                                        $user->fields['realname'], $user->fields['firstname']);
-            }
-            echo $output;
-         }
-      }
-      echo "</td>";
-      echo "<td>".__("Author group", "order").":</td>";
-      echo "<td style='width: 180px;'>";
-      if ($canedit) {
-         if (empty ($ID) || $ID < 0) {
-            if (! empty($this->fields['groups_id'])) {
-               $groups_id = $this->fields['groups_id'];
-            } else {
-               $groups_id = $config->getDefaultAuthorGroup();
-            }
-         } else {
-            $groups_id = $this->fields['groups_id'];
-         }
-
-         Group::Dropdown([
-            'value' => $groups_id,
-            'width'  => '150px',
-         ]);
-      } else {
-         echo Dropdown::getDropdownName('glpi_groups', $this->fields['groups_id']);
-      }
-      echo "</td></tr>";
-      echo "<tr class='tab_bg_1'>";
-      echo "<td>".__("Recipient").":</td>";
-      echo "<td style='width: 170px;'>";
-      if ($canedit) {
-         if (empty ($ID) || $ID < 0) {
-            if (! empty($this->fields['users_id_delivery'])) {
-               $users_id = $this->fields['users_id_delivery'];
-            } else {
-               $users_id = $config->getDefaultRecipient();
-            }
-         } else {
-            $users_id = $this->fields['users_id_delivery'];
-         }
-         User::Dropdown([
-            'name'   => 'users_id_delivery',
-            'value'  => $users_id,
-            'right'  => 'all',
-            'entity' => $this->fields["entities_id"],
-            'width'  => '150px',
-         ]);
-      } else {
-         if ($this->fields['users_id_delivery']) {
-            $user->getFromDB($this->fields['users_id_delivery']);
-            $output = formatUserName($this->fields['users_id'], $user->fields['name'],
-                                     $user->fields['realname'], $user->fields['firstname']);
-            echo $output;
-         }
-      }
-      echo "</td>";
-      echo "<td>".__("Recipient group", "order").":</td>";
-      echo "<td style='width: 180px;'>";
-      if ($canedit) {
-         if (empty ($ID) || $ID < 0) {
-            if (! empty($this->fields['groups_id_delivery'])) {
-               $groups_id = $this->fields['groups_id_delivery'];
-            } else {
-               $groups_id = $config->getDefaultRecipientGroup();
-            }
-         } else {
-            $groups_id = $this->fields['groups_id_delivery'];
-         }
-         Group::Dropdown([
-            'name'  => 'groups_id_delivery',
-            'value' => $groups_id,
-            'width'  => '150px',
-         ]);
-      } else {
-         echo Dropdown::getDropdownName('glpi_groups', $this->fields['groups_id_delivery']);
-      }
-      echo "</td>";
-      echo "</tr></table></td>";
-
-      echo "<td colspan='2'>";
-      if ($ID > 0 && !$template) {
-         $PluginOrderOrder_Item = new PluginOrderOrder_Item();
-         $prices                = $PluginOrderOrder_Item->getAllPrices($ID);
-
-         echo "<table class='format'>";
-
-         echo "<tr>";
-         echo "<td>".__("Price tax free", "order")."</td>";
-         echo "<td>".Html::formatNumber($prices["priceHT"]) ."</td>";
-         echo "</tr>";
-
-         // total price (with postage)
-         $tax = new PluginOrderOrderTax();
-         $tax->getFromDB($this->fields["plugin_order_ordertaxes_id"]);
-
-         $postagewithTVA = $PluginOrderOrder_Item->getPricesATI(
-            $this->fields["port_price"],
-            $tax->getRate()
-         );
-
-         $priceHTwithpostage = $prices["priceHT"] + $this->fields["port_price"];
-         echo "<tr>";
-         echo "<td>".__("Price tax free with postage", "order")."</td>";
-         echo "<td>".Html::formatNumber($priceHTwithpostage)."</td>";
-         echo "</tr>";
-
-         // total price (with taxes)
-         $total = $prices["priceTTC"] + $postagewithTVA;
-         echo "<tr>";
-         echo "<td>".__("Price ATI", "order")."</td>";
-         echo "<td>".Html::formatNumber($total)."</td>";
-         echo "</tr>";
-
-         // total TVA
-         $total_tva = $prices["priceTVA"] + ($postagewithTVA - $this->fields["port_price"]);
-         echo "<tr>";
-         echo "<td>".__("VAT", "order")."</td>";
-         echo "<td>".Html::formatNumber($total_tva)."</td>";
-         echo "</tr>";
-
-         echo "</table>";
-      }
-      echo "</td>";
-      echo "</tr>";
-
-      if ($canedit || $cancancel) {
-         $this->showFormButtons($options);
-      } else {
-         echo "</table></div>";
-         Html::closeForm();
-      }
-
+                        $tax = new PluginOrderOrderTax();
+                        $tax->getFromDB($this->fields["plugin_order_ordertaxes_id"]);
+                        return Html::formatNumber($prices["priceHT"] ?? 0 + intval($this->fields["port_price"]));
+                     })(),
+                  ],
+                  __('Price ATI', 'order') => [
+                     'content' => (function() {
+                        $tax = new PluginOrderOrderTax();
+                        $tax->getFromDB($this->fields["plugin_order_ordertaxes_id"]);
+                        return Html::formatNumber($this->fields["port_price"]);
+                     })(),
+                  ],
+                  __('VAT', 'order') => [
+                     'content' => (function() {
+                        $tax = new PluginOrderOrderTax();
+                        $tax->getFromDB($this->fields["plugin_order_ordertaxes_id"]);
+                        return Html::formatNumber($tax->getRate());
+                     })(),
+                  ],
+               ],
+            ],
+        ]
+      ];
+      renderTwigForm($form, '', $this->fields);
       return true;
    }
 
