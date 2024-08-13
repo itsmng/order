@@ -413,11 +413,11 @@ class PluginOrderOrder_Item extends CommonDBRelation {
                echo "</td>";
 
                echo "<td class='tab_bg_1'><span id='show_quantity'>";
-               echo "<input type='number' min='0' name='quantity' value='0' class='quantity' />";
+               echo "<input type='number' min='0' name='quantity' value='0' class='quantity form-control' />";
                echo "</span></td>";
 
                echo "<td class='tab_bg_1'><span id='show_priceht'>";
-               echo "<input type='number' step='".PLUGIN_ORDER_NUMBER_STEP."' name='price' value='0.00' class='decimal' />";
+               echo "<input type='number' step='".PLUGIN_ORDER_NUMBER_STEP."' name='price' value='0.00' class='form-control decimal' />";
                echo "</span></td>";
 
                echo "<td class='tab_bg_1'><span id='show_taxe'>";
@@ -432,11 +432,11 @@ class PluginOrderOrder_Item extends CommonDBRelation {
 
                echo "<td class='tab_bg_1'><span id='show_pricediscounted'>";
                echo "<input type='number' min='0' step='".PLUGIN_ORDER_NUMBER_STEP."' name='discount'
-                            value='".$order->fields['global_discount']."' class='smalldecimal' />";
+                            value='".$order->fields['global_discount']."' class='smalldecimal form-control' />";
                echo "</span></td>";
 
                echo "<td class='tab_bg_1'><span id='show_validate'>";
-               echo "<input type='submit' name='add_item' value=\"".__("Add")."\" class='submit'>";
+               echo "<input type='submit' name='add_item' value=\"".__("Add")."\" class='btn btn-secondary'>";
                echo "</span></td>";
                echo "</tr>";
             } else {

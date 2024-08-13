@@ -329,7 +329,7 @@ class PluginOrderReference extends CommonDBTM {
 
    public function referenceInUse() {
       $number = countElementsInTable("glpi_plugin_order_orders_items",
-                                     ['plugin_order_references_id' => $this->fields["id"]]);
+                                     ['plugin_order_references_id' => $this->fields["id"] ?? '']);
       if ($number > 0) {
          return true;
       } else {
@@ -471,7 +471,7 @@ class PluginOrderReference extends CommonDBTM {
 
       $types = PluginOrderOrder_Item::getClasses();
 
-      echo "<select name='".$p['myname']."' id='".$p['myname']."'>";
+      echo "<select name='".$p['myname']."' id='".$p['myname']."' class='form-control'>";
       echo "<option value='0' selected>".Dropdown::EMPTY_VALUE."</option>\n";
 
       if ($p['filter']) {
@@ -537,20 +537,26 @@ class PluginOrderReference extends CommonDBTM {
    public function showForm($id, $options = []) {
       global $DB;
 
+      $reference_in_use = !$id ? false : $this->referenceInUse();
+
+      if (!isset($options['item']) || empty($options['item'])) {
+         $options['item'] = $this->fields["itemtype"] ?? '';
+      }
+
       $form = [
         'action'     => $this->getFormURL(),
         'buttons'    => [
             [
-                'name'  => $this->isNewID($id) ? _sx('button', 'Add') : _sx('button', 'Save'),
+                'name'  => $this->isNewID($id) ? 'add' : 'update',
                 'class' => 'btn btn-secondary',
                 'value' => $this->isNewID($id) ? _sx('button', 'Add') : _sx('button', 'Save'),
             ],
-            $this->canDelete() && !$this->isNewID($id) ? [
+            $this->canDelete() && !$this->isNewID($id) && !$this->isDeleted() ? [
                 'name'  => __('Delete'),
                 'class' => 'btn btn-danger',
                 'value' => _sx('button', 'Delete'),
             ] : [],
-            $this->canPurge() && !$this->isNewID($id) && !$this->isDeleted() ? [
+            $this->canPurge() && !$this->isNewID($id) && $this->isDeleted() ? [
                 'name'  => __('Purge'),
                 'class' => 'btn btn-danger',
                 'value' => _sx('button', 'Purge'),
@@ -559,128 +565,120 @@ class PluginOrderReference extends CommonDBTM {
         'content'    => [
             $this->getTypeName() => [
                 'visible'    => true,
-                'inputs'     => [],
+                'inputs'     => [
+                   isset($options['popup']) ? [
+                       'type' => 'hidden',
+                       'name' => 'popup',
+                       'value' => $options['popup'],
+                   ] : [],
+                   __('Name') => [
+                       'type'  => 'text',
+                       'name'  => 'name',
+                       'value' => $this->fields["name"] ?? '',
+                       'required' => true,
+                       'col_lg' => 6,
+                   ],
+                   __('Comments') => [
+                       'type'  => 'textarea',
+                       'name'  => 'comment',
+                       'value' => $this->fields["comment"] ?? '',
+                       'col_lg' => 6,
+                   ],
+                   __('Active') => [
+                       'type'  => 'checkbox',
+                       'name'  => 'is_active',
+                       'value' => $this->fields["is_active"] ?? '',
+                       'col_lg' => 6,
+                   ],
+                   __('Manufacturer') => [
+                       'type'  => 'select',
+                       'name'  => 'manufacturers_id',
+                       'itemtype' => 'Manufacturer',
+                       'value' => $this->fields["manufacturers_id"] ?? '',
+                       'col_lg' => 6,
+                   ],
+                   __('Manufacturer reference', 'order') => [
+                       'type'  => 'text',
+                       'name'  => 'manufacturers_reference',
+                       'value' => $this->fields["manufacturers_reference"] ?? '',
+                       'col_lg' => 6,
+                   ],
+                   __('Item type') => $id > 0 ? [
+                       'type'  => 'hidden',
+                       'name'  => 'itemtype',
+                       'value' => $this->fields["itemtype"] ?? '',
+                   ] : [
+                       'content' => (function() use ($options) {
+                           ob_start();
+                           $this->dropdownAllItems([
+                               'myname'    => 'itemtype',
+                               'value'     => $options["item"],
+                               'entity'    => $_SESSION["glpiactive_entity"],
+                               'ajax_page' => Plugin::getWebDir('order').'/ajax/referencespecifications.php',
+                               'class'     => __CLASS__,
+                           ]);
+                           return ob_get_clean();
+                        })(),
+                   ],
+                   __('Type') => [
+                       'content' => (function() use ($options) {
+                           ob_start();
+                           echo "<span id='show_types_id'>";
+                           if ($options['item']) {
+                              $itemtypeclass = $options['item']."Type";
+                              if (class_exists($itemtypeclass)) {
+                                 if (!$this->referenceInUse()) {
+                                    Dropdown::show($itemtypeclass, [
+                                       'name'  => "types_id",
+                                       'value' => $this->fields["types_id"],
+                                    ]);
+                                 } else {
+                                    echo Dropdown::getDropdownName($itemtypeclass::getTable(), $this->fields["types_id"]);
+                                 }
+                              }
+                           }
+                           echo "</span>";
+                           return ob_get_clean();
+                        })(),
+                   ],
+                   __('Model') => [
+                       'content' => (function() use ($options) {
+                           ob_start();
+                           echo "<span id='show_models_id'>";
+                           if ($options['item']) {
+                              if (class_exists($options['item']."Model")) {
+                                 Dropdown::show($options['item']."Model", [
+                                    'name'  => "models_id",
+                                    'value' => $this->fields["models_id"],
+                                 ]);
+                              }
+                           }
+                           echo "</span>";
+                           return ob_get_clean();
+                        })(),
+                   ],
+                   __('Template name') => [
+                       'content' => (function() use ($options, $DB) {
+                           ob_start();
+                           echo "<span id='show_templates_id'>";
+                           if (!empty($options['item'])
+                               && $DB->fieldExists($options['item']::getTable(), 'is_template')) {
+                              $this->dropdownTemplate('templates_id', $this->fields['entities_id'],
+                                                      $options['item']::getTable(),
+                                                      $this->fields['templates_id']);
+                           }
+                           echo "</span>";
+                           return ob_get_clean();
+                        })(),
+                   ],
+                   __('Last update') => [
+                       'content' => Html::convDateTime($this->fields["date_mod"] ?? ''),
+                   ],
+                ],
             ]
-        ],
+        ]
       ];
       renderTwigForm($form, '', $this->fields);
-      $this->initForm($id, $options);
-      $reference_in_use = !$id ? false : $this->referenceInUse();
-
-      // $this->showTabs($options);
-      $this->showFormHeader($options);
-
-      if (isset($options['popup'])) {
-         echo Html::hidden('popup', ['value' => $options['popup']]);
-      }
-      if (!isset($options['item']) || empty($options['item'])) {
-         $options['item'] = $this->fields["itemtype"];
-      }
-
-      echo "<tr class='tab_bg_1'><td>".__("Name")."</td>";
-      echo "<td>";
-      Html::autocompletionTextField($this, "name");
-      echo "</td>";
-      echo "<td rowspan='2'>".__("Comments")."</td>";
-      echo "<td rowspan='2'>";
-      echo "<textarea cols='50' rows='3' name='comment'>".$this->fields["comment"] .
-            "</textarea>";
-      echo "</td></tr>";
-
-      echo "<tr class='tab_bg_1'><td>".__("Active")."</td>";
-      echo "<td>";
-      Dropdown::showYesNo('is_active', $this->fields['is_active']);
-      echo "</td></tr>";
-
-      echo "<tr class='tab_bg_1'><td>".__("Manufacturer")."</td>";
-      echo "<td>";
-      Manufacturer::Dropdown(['value' => $this->fields['manufacturers_id']]);
-      echo "</td>";
-      echo "<td>".__("Manufacturer reference", "order")."</td>";
-      echo "<td>";
-      echo Html::autocompletionTextField($this, 'manufacturers_reference');
-      echo "</td>";
-      echo "</tr>";
-
-      echo "<tr class='tab_bg_1'>";
-
-      echo "<td>".__("Item type");
-      // Mandatory dropdown :
-      if ($id <= 0) {
-         echo " <span class='red'>*</span>";
-      }
-      echo "</td>";
-      echo "<td>";
-      if ($id > 0) {
-         $itemtype = $this->fields["itemtype"];
-         $item     = new $itemtype();
-         echo $item->getTypeName();
-         echo Html::hidden('itemtype', ['value' => $itemtype]);
-      } else {
-         $this->dropdownAllItems([
-            'myname'    => 'itemtype',
-            'value'     => $options["item"],
-            'entity'    => $_SESSION["glpiactive_entity"],
-            'ajax_page' => Plugin::getWebDir('order').'/ajax/referencespecifications.php',
-            'class'     => __CLASS__,
-         ]);
-      }
-      echo "</td>";
-
-      echo "<td>".__("Type")."</td>";
-      echo "<td>";
-      echo "<span id='show_types_id'>";
-      if ($options['item']) {
-         $itemtypeclass = $options['item']."Type";
-         if (class_exists($itemtypeclass)) {
-            if (!$reference_in_use) {
-               Dropdown::show($itemtypeclass, [
-                  'name'  => "types_id",
-                  'value' => $this->fields["types_id"],
-               ]);
-            } else {
-               echo Dropdown::getDropdownName($itemtypeclass::getTable(), $this->fields["types_id"]);
-            }
-         }
-      }
-      echo "</span>";
-      echo "</td></tr>";
-
-      echo "<tr class='tab_bg_1'><td>".__("Model")."</td>";
-      echo "<td>";
-      echo "<span id='show_models_id'>";
-      if ($options['item']) {
-         if (class_exists($itemtypeclass)) {
-            Dropdown::show($options['item']."Model", [
-               'name'  => "models_id",
-               'value' => $this->fields["models_id"],
-            ]);
-         }
-      }
-      echo "</span>";
-      echo "</td>";
-
-      echo "<td>".__("Template name")."</td>";
-      echo "<td>";
-      echo "<span id='show_templates_id'>";
-      if (!empty($options['item'])
-         && $DB->fieldExists($options['item']::getTable(), 'is_template')) {
-         $this->dropdownTemplate('templates_id', $this->fields['entities_id'],
-                                 $options['item']::getTable(),
-                                 $this->fields['templates_id']);
-      }
-      echo "</span>";
-      echo "</td></tr>";
-
-      echo "<tr class='tab_bg_1'><td>".__("Last update")."</td>";
-      echo "<td>";
-      echo Html::convDateTime($this->fields["date_mod"]);
-      echo "</td>";
-      echo "<td colspan='2'></td></tr>";
-
-      $options['canedit'] = true;
-      $this->showFormButtons($options);
-      Html::closeForm();
       return true;
    }
 

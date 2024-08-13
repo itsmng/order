@@ -859,20 +859,17 @@ class PluginOrderOrder extends CommonDBTM {
                'name'  => 'delete',
                'value' => __('Delete'),
                'class' => 'btn btn-secondary',
-               'href'  => $this->getDeleteURL(),
             ] : [],
          ] + (!$this->isNewId($ID) && $this->isDeleted() ? [
             [
                'name'  => 'restore',
                'value' => __('Restore'),
                'class' => 'btn btn-secondary',
-               'href'  => $this->getRestoreURL(),
             ],
             $this->canPurge() ? [
                'name'  => 'purge',
                'value' => __('Purge'),
                'class' => 'btn btn-secondary',
-               'href'  => $this->getPurgeURL(),
             ] : [],
          ] : []),
          'content'     => [

@@ -179,63 +179,76 @@ class PluginOrderReference_Supplier extends CommonDBChild {
          $plugin_order_references_id = $options['plugin_order_references_id'];
       }
 
-      $this->initForm($ID, $options);
-      $this->showFormHeader($options);
-
       $PluginOrderReference = new PluginOrderReference();
       $PluginOrderReference->getFromDB($plugin_order_references_id);
-      echo Html::hidden('plugin_order_references_id', ['value' => $plugin_order_references_id]);
-      echo Html::hidden('entities_id', ['value' => $PluginOrderReference->getEntityID()]);
-      echo Html::hidden('is_recursive', ['value' => $PluginOrderReference->isRecursive()]);
 
-      echo "<tr class='tab_bg_1'>";
-      echo "<td>".__("Supplier").": </td>";
-      echo "<td>";
+      $form = [
+        'action'   => Toolbox::getItemTypeFormURL(__CLASS__),
+        'buttons'  => [
+            [
+               'name' => 'add',
+               'value'  => __('Add'),
+               'class' => 'btn btn-secondary',
+            ],
+         ],
+         'content' => [
+            $this->getTypeName(1) => [
+                'visible'  => true,
+                'inputs' => [
+                    [
+                        'name'        => 'plugin_order_references_id',
+                        'type'        => 'hidden',
+                        'value'       => $plugin_order_references_id,
+                    ],
+                    [
+                        'name'        => 'entities_id',
+                        'type'        => 'hidden',
+                        'value'       => $PluginOrderReference->getEntityID(),
+                    ],
+                    [
+                        'name'        => 'is_recursive',
+                        'type'        => 'hidden',
+                        'value'       => $PluginOrderReference->isRecursive(),
+                    ],
+                    __('Supplier') => $ID > 0 ? [
+                        'content' => (function() {
+                            $supplier = new Supplier();
+                            $supplier->getFromDB($this->fields['suppliers_id']);
+                            return $supplier->getLink(Session::haveRight('supplier', READ));
+                        })(),
+                    ] : [
+                        'type'        => 'select',
+                        'name'        => 'suppliers_id',
+                        'itemtype'    => 'Supplier',
+                        'conditions'  => [
+                            'entities_id' => $PluginOrderReference->getEntityID(),
+                        ],
+                        'used'        => (function() use ($plugin_order_references_id, $DB) {
+                            $suppliers = [];
+                            $query = "SELECT `suppliers_id`
+                                        FROM `".self::getTable()."`
+                                        WHERE `plugin_order_references_id` = '$plugin_order_references_id'";
+                            $result = $DB->query($query);
+                            while ($data = $DB->fetchArray($result)) {
+                                $suppliers[] = $data["suppliers_id"];
+                            }
+                            return $suppliers;
+                        })(),
+                    ],
+                    __('Manufacturer\'s product reference') => [
+                        'type'        => 'text',
+                        'name'        => 'reference_code',
+                    ],
+                    __('Unit price tax free') => [
+                        'type'        => 'number',
+                        'name'        => 'price_taxfree',
+                    ],
+                ],
+            ]
+         ],
+      ];
+      renderTwigForm($form);
 
-      if ($ID > 0) {
-         $supplier = new Supplier();
-         $supplier->getFromDB($this->fields['suppliers_id']);
-         echo $supplier->getLink(Session::haveRight('supplier', READ));
-      } else {
-         $suppliers = [];
-         $query = "SELECT `suppliers_id`
-                     FROM `".self::getTable()."`
-                     WHERE `plugin_order_references_id` = '$plugin_order_references_id'";
-         $result = $DB->query($query);
-         while ($data = $DB->fetchArray($result)) {
-            $suppliers[] = $data["suppliers_id"];
-         }
-
-         Supplier::Dropdown([
-            'name'   => 'suppliers_id',
-            'used'   => $suppliers,
-            'entity' => $PluginOrderReference->getEntityID()
-         ]);
-      }
-      echo "</td>";
-
-      echo "<td>".__("Manufacturer's product reference", "order").": </td>";
-      echo "<td>";
-      Html::autocompletionTextField($this, "reference_code");
-      echo "</td></tr>";
-
-      echo "</tr>";
-
-      echo "<tr class='tab_bg_1'>";
-
-      echo "<td>".__("Unit price tax free", "order").": </td>";
-      echo "<td>";
-      echo "<input type='number' min='0' step='".PLUGIN_ORDER_NUMBER_STEP."' name='price_taxfree' value=\""
-        .Html::formatNumber($this->fields["price_taxfree"], true)."\" class='decimal'>";
-      echo "</td>";
-
-      echo "<td></td>";
-      echo "<td></td>";
-
-      echo "</tr>";
-
-      $options['candel'] = false;
-      $this->showFormButtons($options);
       return true;
    }
 
