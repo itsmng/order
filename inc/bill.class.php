@@ -66,51 +66,56 @@ class PluginOrderBill extends CommonDropdown
 
    public function getAdditionalFields() {
       return [
-         [
+         __('Supplier') => [
             'name'  => 'suppliers_id',
-            'label' => __("Supplier"),
-            'type'  => 'dropdownValue'
+            'itemtype'    => 'Supplier',
+            'type'  => 'select',
+            'value'       => empty($this->fields['suppliers_id']) ? 0 : $this->fields['suppliers_id'],
          ],
-         [
+         __('Value') => [
             'name'  => 'value',
-            'label' => __("Value"),
-            'type'  => 'text'
-         ],
-         [
-            'name'  => 'number',
-            'label' => _x("phone", "Number")." <span class='red'>*</span>",
             'type'  => 'text',
-            'mandatory' => true
+            'value'       => empty($this->fields['value']) ? '' : $this->fields['value'],
          ],
-         [
+         __('phone', "Number") => [
+            'name'  => 'number',
+            'type'  => 'text',
+            'required' => true,
+            'value'       => empty($this->fields['number']) ? '' : $this->fields['number'],
+         ],
+         __('Date') => [
             'name'  => 'billdate',
-            'label' => __("Date"),
-            'type'  => 'date'
+            'type'  => 'date',
+            'value' => empty($this->fields['billdate']) ? date('Y-m-d') : $this->fields['billdate'],
          ],
-         [
+         __('Type') => [
             'name'  => 'plugin_order_billtypes_id',
-            'label' => __("Type"),
-            'type'  => 'dropdownValue'
+            'type'  => 'select',
+            'itemtype'    => 'PluginOrderBillType',
+            'value'       => empty($this->fields['plugin_order_billtypes_id']) ? 0 : $this->fields['plugin_order_billtypes_id'],
          ],
-         [
+         __('Status') => [
             'name'  => 'plugin_order_billstates_id',
-            'label' => __("Status"),
-            'type'  => 'dropdownValue'
+            'type'  => 'select',
+            'itemtype'    => 'PluginOrderBillState',
+            'value'       => empty($this->fields['plugin_order_billstates_id']) ? 0 : $this->fields['plugin_order_billstates_id'],
          ],
-         [
+         __('Order', "order") => [
             'name'  => 'plugin_order_orders_id',
-            'label' => __("Order", "order"),
-            'type'  => 'dropdownValue'
+            'type'  => 'select',
+            'itemtype'    => 'PluginOrderOrder',
+            'value'       => empty($this->fields['plugin_order_orders_id']) ? 0 : $this->fields['plugin_order_orders_id'],
          ],
-         [
+         __('Approver') => [
             'name'  => 'users_id_validation',
-            'label' => __("Approver"),
-            'type'  => 'UserDropdown'
+            'itemtype'    => 'User',
+            'type'  => 'select',
+            'value'       => empty($this->fields['users_id_validation']) ? 0 : $this->fields['users_id_validation'],
          ],
-         [
+         __('Approval date') => [
             'name'  => 'validationdate',
-            'label' => __("Approval date"),
-            'type'  => 'date'
+            'type'  => 'date',
+            'value' => empty($this->fields['validationdate']) ? date('Y-m-d') : $this->fields['validationdate'],
          ]
       ];
    }
