@@ -28,6 +28,8 @@
  * -------------------------------------------------------------------------
  */
 
+use Odtphp\Odf;
+
 if (!defined('GLPI_ROOT')) {
    die("Sorry. You can't access directly to this file");
 }
@@ -1573,7 +1575,7 @@ class PluginOrderOrder extends CommonDBTM {
 
       if ($template) {
          $config = ['PATH_TO_TMP' => GLPI_DOC_DIR.'/_tmp'];
-         $odf = new Odtphp\Odf(PLUGIN_ORDER_TEMPLATE_DIR."$template", $config);
+         $odf = new Odf(PLUGIN_ORDER_TEMPLATE_DIR."$template", $config);
          $this->getFromDB($ID);
 
          if (file_exists(PLUGIN_ORDER_TEMPLATE_CUSTOM_DIR."custom.php")) {

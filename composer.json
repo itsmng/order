@@ -1,7 +1,7 @@
 {
     "require": {
         "php": "^7.2",
-        "masnathan/odtphp": "1.7"
+        "sboden/odtphp": "^2.2"
     },
     "config": {
         "optimize-autoloader": true,
