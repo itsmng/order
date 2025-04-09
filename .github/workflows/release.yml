@@ -24,21 +24,21 @@ jobs:
 
       - name: Build project
         run: |
-          cd /home/runner/work/mreporting/
-          cd mreporting && composer install --no-dev && cd ..
-          rm -r mreporting/.git* mreporting/composer.*
-          tar -zcvf mreporting-${{ github.ref_name }}.tgz mreporting
+          cd /home/runner/work/order/
+          cd order && composer install --no-dev && cd ..
+          rm -r order/.git* order/composer.*
+          tar -zcvf order-${{ github.ref_name }}.tgz order
 
       - name: Upload release
         uses: actions/upload-artifact@v4
         with:
-          name: mreporting-${{ github.ref_name }}.tgz
-          path: /home/runner/work/mreporting/mreporting-${{ github.ref_name }}.tgz
+          name: order-${{ github.ref_name }}.tgz
+          path: /home/runner/work/order/order-${{ github.ref_name }}.tgz
       
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          files: /home/runner/work/mreporting/mreporting-${{ github.ref_name }}.tgz
+          files: /home/runner/work/order/order-${{ github.ref_name }}.tgz
           body: "New release is available"
           name: ${{ github.ref_name }}
           draft: true
