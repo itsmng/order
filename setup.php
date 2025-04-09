@@ -28,7 +28,7 @@
  * -------------------------------------------------------------------------
  */
 
-define('PLUGIN_ORDER_VERSION', '2.10.4');
+define('PLUGIN_ORDER_VERSION', '2.10.5');
 
 if (!defined('PLUGIN_ORDER_DIR')) {
    define("PLUGIN_ORDER_DIR", Plugin::getPhpDir('order'));
