@@ -302,14 +302,18 @@ class PluginOrderOrder_Item extends CommonDBRelation {
          for ($i = 0; $i < $quantity; $i++) {
             $input["plugin_order_orders_id"]          = $orders_id;
             $input["plugin_order_references_id"]      = $ref_id;
-            $input["plugin_order_ordertaxes_id"]      = $taxes_id;
-            $input["plugin_order_analyticnatures_id"] = $analytic_nature_id;
+            $input["plugin_order_ordertaxes_id"]      = !empty($taxes_id) ? $taxes_id : 0;
+            $input["plugin_order_analyticnatures_id"] = !empty($analytic_nature_id) ? $analytic_nature_id : 0;
             $input["itemtype"]                        = $itemtype;
             $input["entities_id"]                     = $order->getEntityID();
             $input["is_recursive"]                    = $order->isRecursive();
             $input["price_taxfree"]                   = $price;
             $input["price_discounted"]                = $price - ($price * ($discounted_price / 100));
-            $input["states_id"]                       = PluginOrderOrder::ORDER_DEVICE_NOT_DELIVRED;;
+            if (defined('PluginOrderOrder::ORDER_DEVICE_NOT_DELIVRED')) {
+               $input["states_id"] = PluginOrderOrder::ORDER_DEVICE_NOT_DELIVRED;
+           } else {
+               $input["states_id"] = 1;
+           }
             $input["price_ati"]                       = $this->getPricesATI(
                $input["price_discounted"],
                $tax->getRate()
