@@ -396,7 +396,7 @@ msgstr "La date estimée est dépassée"
 
 #: inc/order.class.php:1118
 msgid "Global discount to apply to items"
-msgstr ""
+msgstr "Remise globale à appliquer aux articles"
 
 #: inc/order.class.php:1306 inc/order.class.php:1895 inc/order.class.php:1993
 msgid "Price tax free"
@@ -579,7 +579,7 @@ msgstr "Certains champs ne peuvent-être modifiés : ils proviennent d'une comma
 
 #: inc/order_item.class.php:358
 msgid "Add to the order from the catalog"
-msgstr ""
+msgstr "Ajouter au panier depuis le catalogue"
 
 #: inc/order_item.class.php:364 inc/order_item.class.php:1576
 #: inc/reference_supplier.class.php:250 inc/reference_supplier.class.php:267
