@@ -990,6 +990,8 @@ class PluginOrderOrder extends CommonDBTM {
                    __('Postage', 'order') => $canedit ? [
                       'type'  => 'number',
                       'name'  => 'port_price',
+                      'step'  => '0.01',
+                      'min'   => '0',
                       'value' => $this->fields['port_price'],
                    ] : [
                       'content' => Html::formatNumber($this->fields['port_price']),
@@ -1044,6 +1046,9 @@ class PluginOrderOrder extends CommonDBTM {
                       'type'  => 'number',
                       'name'  => 'global_discount',
                       'value' => $this->fields['global_discount'],
+                      'step'  => '0.01',
+                      'min'   => '0',
+                      'max'   => '100',
                       'after' => '%',
                    ] : [
                       'content' => Html::formatNumber($this->fields['global_discount']),
